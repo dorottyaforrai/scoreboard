@@ -1,0 +1,13 @@
+[ {
+  "homeTeam" : "Mexico",
+  "awayTeam" : "Canada",
+  "homeScore" : 0,
+  "awayScore" : 5,
+  "timestamp" : "2024-05-07T10:30:00"
+}, {
+  "homeTeam" : "Spain",
+  "awayTeam" : "Brazil",
+  "homeScore" : 10,
+  "awayScore" : 2,
+  "timestamp" : "2024-05-07T10:32:00"
+} ]
