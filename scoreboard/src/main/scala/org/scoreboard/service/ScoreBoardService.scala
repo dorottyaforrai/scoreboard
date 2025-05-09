@@ -1,22 +1,29 @@
 package org.scoreboard.service
 
 import org.scoreboard.model.Match
-import org.scoreboard.util.FileUtils.{readFromFile, writeToFile}
+import org.scoreboard.util.DateUtils.dateTimeFormatter
+import org.scoreboard.util.{FileUtils, TimeProvider}
 
 import java.io.File
-import java.time.LocalDateTime
 
-object ScoreBoardService {
+class ScoreBoardService(using time: TimeProvider) {
 
-  def startMatch(jsonFile: File, home: String, away: String): Unit = {
-    val matches = readFromFile(jsonFile)
-    if (matches.exists(game => game.homeTeam == home && game.awayTeam == away))
-      throw new IllegalArgumentException(s"Match: $home - $away already exists, please use `update` command.")
-    writeToFile(jsonFile, matches :+ Match(homeTeam = home, awayTeam = away))
+  private val fileUtils: FileUtils = new FileUtils()
+
+  def startMatch(jsonFile: File, home: String, away: String): String = {
+    val matches = fileUtils.readFromFile(jsonFile)
+    if (matches.exists(game => game.homeTeam == home && game.awayTeam == away)) {
+      throw new IllegalArgumentException(s"Match: $home - $away already exists, please use `update` or `finish` command.")
+    } else {
+      println(s"Adding $home - $away match to the board...")
+      val message = fileUtils.writeToFile(jsonFile, matches :+ Match(homeTeam = home, awayTeam = away))
+      println(message)
+      message
+    }
   }
 
-  def updateScore(jsonFile: File, home: String, away: String, homeScore: Int, awayScore: Int, currentTime: LocalDateTime): String = {
-    val matches = readFromFile(jsonFile)
+  def updateScore(jsonFile: File, home: String, away: String, homeScore: Int, awayScore: Int): String = {
+    val matches = fileUtils.readFromFile(jsonFile)
 
     val updatedMatches: Map[Match, Option[Match]] = matches.map { game =>
       if (game.homeTeam == home && game.awayTeam == away) {
@@ -25,7 +32,7 @@ object ScoreBoardService {
           awayTeam = away,
           homeScore = homeScore,
           awayScore = awayScore,
-          timestamp = currentTime))
+          timestamp = time.now()))
     } else {
       game -> None
     }
@@ -40,23 +47,32 @@ object ScoreBoardService {
       case (game, None) => game
     }.toSeq
 
-      writeToFile(jsonFile, result)
+      val message = fileUtils.writeToFile(jsonFile, result)
+      println(message)
+      message
     }
 
   }
 
-  def finishMatch(jsonFile: File, home: String, away: String): Unit = {
-    val matches = readFromFile(jsonFile)
+  def finishMatch(jsonFile: File, home: String, away: String): String = {
+    val matches = fileUtils.readFromFile(jsonFile)
     if (!matches.exists(game => game.homeTeam == home && game.awayTeam == away))
       throw new IllegalArgumentException(getStartMessage(home, away))
     else {
+      val finishedGame = matches.filter(m => m.homeTeam == home && m.awayTeam == away)
+      println(s"You are about to finish: ${finishedGame.mkString(",")}")
       val updated = matches.filterNot(m => m.homeTeam == home && m.awayTeam == away)
-    writeToFile(jsonFile, updated)}
+      fileUtils.writeToFile(jsonFile, updated)}
+      val message = s"Match has been finished successfully."
+      println(message)
+      message
   }
 
   def printSummary(jsonFile: File): Unit = {
-    val matches = readFromFile(jsonFile)
+    val matches = fileUtils.readFromFile(jsonFile)
     val sorted = matches.sortBy(_.timestamp)
+    val now = time.now()
+    println(s"Current Status at ${now.format(dateTimeFormatter)} is:")
     sorted.foreach { game =>
       println(s"${game.homeTeam} ${game.homeScore} - ${game.awayScore} ${game.awayTeam}")
     }

@@ -9,9 +9,7 @@ import org.scoreboard.model.Match
 import java.io.File
 import scala.util.{Failure, Success, Try}
 
-object FileUtils {
-
-  //private val jsonFile: File = new File("scoreboard.json")
+class FileUtils(using time: TimeProvider) {
 
   private val mapper = new ObjectMapper()
   mapper.registerModule(DefaultScalaModule)
@@ -28,8 +26,8 @@ object FileUtils {
     Try {
       writer.withDefaultPrettyPrinter().writeValue(jsonFile, matches)
     } match {
-      case Success(_) => s"${matches.mkString(",")} has been successfully added to ${jsonFile.getAbsolutePath}"
-      case Failure(exception) => s"Failed to write: ${matches.mkString(",")} into ${jsonFile.getAbsolutePath}: ${exception.getMessage}"
+      case Success(_) => s"${matches.mkString(",")} has been successfully added"
+      case Failure(exception) => throw new RuntimeException(s"Failed to write: ${matches.mkString(",")}: ${exception.getMessage}")
     }
   }
 

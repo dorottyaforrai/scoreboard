@@ -1,31 +1,29 @@
 package org.scoreboard
 
-
 import org.scoreboard.service.ScoreBoardService
+import org.scoreboard.util.SystemTimeProvider
 
 import java.io.File
-import java.time.LocalDateTime
-
 
 object Main {
 
     def main(args: Array[String]): Unit = {
-      val currentTime = LocalDateTime.now()
       val jsonFile: File = new File("scoreboard.json")
-
+      given timeProvider: SystemTimeProvider = new SystemTimeProvider()
+      val scoreBoardService = new ScoreBoardService()
 
       args.toList match {
         case "start" :: home :: away :: Nil =>
-          ScoreBoardService.startMatch(jsonFile, home, away)
+          scoreBoardService.startMatch(jsonFile, home, away)
 
         case "update" :: home :: away :: hScore :: aScore :: Nil =>
-          ScoreBoardService.updateScore(jsonFile, home, away, hScore.toInt, aScore.toInt, currentTime)
+          scoreBoardService.updateScore(jsonFile, home, away, hScore.toInt, aScore.toInt)
 
         case "finish" :: home :: away :: Nil =>
-          ScoreBoardService.finishMatch(jsonFile, home, away)
+          scoreBoardService.finishMatch(jsonFile, home, away)
 
         case "summary" :: Nil =>
-          ScoreBoardService.printSummary(jsonFile)
+          scoreBoardService.printSummary(jsonFile)
 
         case _ =>
           println("Usage: start <home> <away> | update <home> <away> <homeScore> <awayScore> | finish <home> <away> | summary")

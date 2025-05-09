@@ -1,7 +1,8 @@
 package org.scoreboard.service
 
-import org.junit.jupiter.api._
-import org.junit.jupiter.api.Assertions._
+import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.*
+import org.scoreboard.mocks.TestTimeProvider
 import org.scoreboard.model.Match
 import org.scoreboard.util.FileUtils
 
@@ -12,12 +13,16 @@ class ScoreBoardServiceTest {
 
   var tempFile: File = _
   private val now = LocalDateTime.of(2025, 5, 8, 11, 6)
+  given timeProvider: TestTimeProvider = new TestTimeProvider(now)
+  private val scoreBoardService: ScoreBoardService = new ScoreBoardService()
+  private val fileUtils: FileUtils = new FileUtils()
+
 
   @BeforeEach
   def setup(): Unit = {
     tempFile = File.createTempFile("scoreboard", ".json")
     tempFile.deleteOnExit()
-    FileUtils.writeToFile(tempFile, Seq.empty)
+    fileUtils.writeToFile(tempFile, Seq.empty)
   }
 
   @AfterEach
@@ -27,30 +32,36 @@ class ScoreBoardServiceTest {
 
   @Test
   def testStartMatchSuccess(): Unit = {
-    ScoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
-    val matches = FileUtils.readFromFile(tempFile)
+    val expected = "Match between home team: TeamA and away team:TeamB, current score: 0-0, last updated time: 2025-05-08 11:06:00. has been successfully added"
+    val actual = scoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
+    val matches = fileUtils.readFromFile(tempFile)
     assertEquals(1, matches.size)
     assertEquals("TeamA", matches.head.homeTeam)
     assertEquals("TeamB", matches.head.awayTeam)
+    assertEquals(expected, actual)
+
   }
 
   @Test
   def testStartMatchAlreadyExists(): Unit = {
-    ScoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
+    val expected = "Match: TeamA - TeamB already exists, please use `update` or `finish` command."
+    scoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
+
     val exception = assertThrows(classOf[IllegalArgumentException], () =>
-      ScoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
+      scoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
     )
-    assertTrue(exception.getMessage.contains("already exists"))
+    assertEquals(expected, exception.getMessage)
   }
 
   @Test
   def testUpdateScore(): Unit = {
-    ScoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
-    ScoreBoardService.startMatch(tempFile, "TeamC", "TeamD")
+    val expected = "Match between home team: TeamA and away team:TeamB, current score: 2-1, last updated time: 2025-05-08 11:06:00.,Match between home team: TeamC and away team:TeamD, current score: 0-0, last updated time: 2025-05-08 11:06:00. has been successfully added"
+    scoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
+    scoreBoardService.startMatch(tempFile, "TeamC", "TeamD")
 
-    ScoreBoardService.updateScore(tempFile, "TeamA", "TeamB", 2, 1, now)
+    val actual = scoreBoardService.updateScore(tempFile, "TeamA", "TeamB", 2, 1)
 
-    val matches = FileUtils.readFromFile(tempFile)
+    val matches = fileUtils.readFromFile(tempFile)
     assertEquals(2, matches.size)
 
     val maybeUpdated = matches.find(m => m.homeTeam == "TeamA" && m.awayTeam == "TeamB").get
@@ -64,53 +75,58 @@ class ScoreBoardServiceTest {
     assertEquals("TeamD", maybeUntouched.awayTeam)
     assertEquals(0, maybeUntouched.homeScore)
     assertEquals(0, maybeUntouched.awayScore)
+    assertEquals(expected, actual)
   }
 
   @Test
   def testUpdateScoreThrowsException(): Unit = {
-    ScoreBoardService.startMatch(tempFile, "TeamC", "TeamD")
+    val expected = "Match: TeamX - TeamY hasn't started yet. If you would like to start it, please use `start` command."
+    scoreBoardService.startMatch(tempFile, "TeamC", "TeamD")
 
-    val thrown = assertThrows(
+    val exception = assertThrows(
       classOf[IllegalArgumentException],
-      () => ScoreBoardService.updateScore(tempFile, "TeamX", "TeamY", 2, 1, now)
+      () => scoreBoardService.updateScore(tempFile, "TeamX", "TeamY", 2, 1)
     )
 
-    assertTrue(thrown.getMessage.contains("Match: TeamX - TeamY hasn't started yet"))
+    assertEquals(expected, exception.getMessage)
   }
 
 
   @Test
   def testFinishMatch(): Unit = {
-    ScoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
-    ScoreBoardService.finishMatch(tempFile, "TeamA", "TeamB")
-    val matches = FileUtils.readFromFile(tempFile)
+    val expected = "Match has been finished successfully."
+    scoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
+    val actual = scoreBoardService.finishMatch(tempFile, "TeamA", "TeamB")
+    val matches = fileUtils.readFromFile(tempFile)
     assertTrue(matches.isEmpty)
+    assertEquals(expected, actual)
   }
 
   @Test
   def testFinishMatchNotStarted(): Unit = {
-    val ex = assertThrows(classOf[IllegalArgumentException], () =>
-      ScoreBoardService.finishMatch(tempFile, "TeamA", "TeamB")
+    val expected = "Match: TeamA - TeamB hasn't started yet. If you would like to start it, please use `start` command."
+    val exception = assertThrows(classOf[IllegalArgumentException], () =>
+      scoreBoardService.finishMatch(tempFile, "TeamA", "TeamB")
     )
-    assertTrue(ex.getMessage.contains("hasn't started yet"))
+    assertEquals(expected, exception.getMessage)
   }
 
   @Test
   def testPrintSummary(): Unit = {
-    val now = LocalDateTime.now()
     val earlier = now.minusHours(1)
 
-    val m1 = Match("Team1", "Team2", 1, 0, earlier)
-    val m2 = Match("Team3", "Team4", 2, 2, now)
-    FileUtils.writeToFile(tempFile, Seq(m2, m1))
+    val gameOne = Match("Team1", "Team2", 1, 0, earlier)
+    val gameTwo = Match("Team3", "Team4", 2, 2, now)
+    fileUtils.writeToFile(tempFile, Seq(gameOne, gameTwo))
 
     val out = new ByteArrayOutputStream()
     Console.withOut(new PrintStream(out)) {
-      ScoreBoardService.printSummary(tempFile)
+      scoreBoardService.printSummary(tempFile)
     }
 
     val printed = out.toString.trim
-    assertTrue(printed.startsWith("Team1 1 - 0 Team2"))
+    assertTrue(printed.startsWith("Current Status at 2025-05-08 11:06:00 is:"))
+    assertTrue(printed.contains("Team1 1 - 0 Team2"))
     assertTrue(printed.contains("Team3 2 - 2 Team4"))
   }
 }
