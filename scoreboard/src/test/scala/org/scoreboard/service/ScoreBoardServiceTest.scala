@@ -32,7 +32,7 @@ class ScoreBoardServiceTest {
 
   @Test
   def testStartMatchSuccess(): Unit = {
-    val expected = "Match between home team: TeamA and away team:TeamB, current score: 0-0, last updated time: 2025-05-08 11:06:00. has been successfully added"
+    val expected = "Match between home team: TeamA and away team: TeamB, current score: 0-0, last updated time: 2025-05-08 11:06:00. has been successfully added"
     val actual = scoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
     val matches = fileUtils.readFromFile(tempFile)
     assertEquals(1, matches.size)
@@ -55,7 +55,7 @@ class ScoreBoardServiceTest {
 
   @Test
   def testUpdateScore(): Unit = {
-    val expected = "Match between home team: TeamA and away team:TeamB, current score: 2-1, last updated time: 2025-05-08 11:06:00.,Match between home team: TeamC and away team:TeamD, current score: 0-0, last updated time: 2025-05-08 11:06:00. has been successfully added"
+    val expected = "Match between home team: TeamA and away team: TeamB, current score: 2-1, last updated time: 2025-05-08 11:06:00.,Match between home team: TeamC and away team: TeamD, current score: 0-0, last updated time: 2025-05-08 11:06:00. has been successfully added"
     scoreBoardService.startMatch(tempFile, "TeamA", "TeamB")
     scoreBoardService.startMatch(tempFile, "TeamC", "TeamD")
 

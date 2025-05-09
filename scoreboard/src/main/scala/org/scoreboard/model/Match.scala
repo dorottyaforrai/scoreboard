@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 @JsonPropertyOrder(Array("homeTeam", "awayTeam", "homeScore", "awayScore", "timestamp"))
 case class Match(homeTeam: String, awayTeam: String, homeScore: Int, awayScore: Int, timestamp: LocalDateTime) {
   override def toString : String = {
-    s"Match between home team: $homeTeam and away team:$awayTeam, current score: $homeScore-$awayScore, last updated time: ${timestamp.format(dateTimeFormatter)}."
+    s"Match between home team: $homeTeam and away team: $awayTeam, current score: $homeScore-$awayScore, last updated time: ${timestamp.format(dateTimeFormatter)}."
   }
 }
 
